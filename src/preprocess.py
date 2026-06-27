@@ -1,34 +1,34 @@
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
-
-def get_data_generators(data_dir):
-
-    datagen = ImageDataGenerator(
-        rescale=1./255,
+def load_data(data_dir):
+    train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        data_dir,
         validation_split=0.2,
-        rotation_range=20,
-        zoom_range=0.2,
-        horizontal_flip=True
+        subset="training",
+        seed=42,
+        image_size=IMG_SIZE,
+        batch_size=BATCH_SIZE
     )
 
-    train = datagen.flow_from_directory(
+    val_ds = tf.keras.preprocessing.image_dataset_from_directory(
         data_dir,
-        target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        subset='training',
-        class_mode='categorical'
+        validation_split=0.2,
+        subset="validation",
+        seed=42,
+        image_size=IMG_SIZE,
+        batch_size=BATCH_SIZE
     )
 
-    val = datagen.flow_from_directory(
-        data_dir,
-        target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        subset='validation',
-        class_mode='categorical'
-    )
+    class_names = train_ds.class_names
 
-    return train, val
+    # Normalize
+    normalization_layer = tf.keras.layers.Rescaling(1./255)
+
+    train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
+    val_ds = val_ds.map(lambda x, y: (normalization_layer(x), y))
+
+    return train_ds, val_ds, class_names
+
